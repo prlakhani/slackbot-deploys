@@ -1,0 +1,6 @@
+*.sw*
+*.pyc
+*.bak
+log*.csv
+log*.csv_DEBUG
+user_cache.save
