@@ -27,7 +27,7 @@ class Bot:
 
         self.csv_filename = "log" + time.strftime("%Y%m%d-%H%M") + ".csv"
         self.first_run = True
-
+        self.last_run = datetime.date.today()-timedelta(days=1)
         # local cache of usernames
         # maps userIds to usernames
         self.user_cache = self.loadUserCache()
@@ -57,20 +57,17 @@ class Bot:
 
             self.team_domain = settings["teamDomain"]
             self.channel_name = settings["channelName"]
-            self.min_countdown = settings["callouts"]["timeBetween"]["minTime"]
-            self.max_countdown = settings["callouts"]["timeBetween"]["maxTime"]
+            self.deploy_time = settings["callouts"]["deployTime"]
             self.num_people_per_callout = settings["callouts"]["numPeople"]
             self.sliding_window_size = settings["callouts"]["slidingWindowSize"]
-            self.group_callout_chance = settings["callouts"]["groupCalloutChance"]
             # self.channel_id = settings["channelId"]
             self.channel_id = fci.fetch_id(settings["channelName"])
-            self.exercises = settings["exercises"]
             self.timezone = pytz.timezone(settings["timezone"])
             self.office_hours_on = settings["officeHours"]["on"]
             self.office_hours_begin = settings["officeHours"]["begin"]
             self.office_hours_end = settings["officeHours"]["end"]
             self.no_weekends = settings["officeHours"]["noWeekends"]
-            self.excluded_users = settings["excludedUsers"]
+            self.allowed_to_deploy = settings["allowedToDeploy"]
             self.debug = settings["debug"]
 
         self.post_URL = "https://" + self.team_domain + ".slack.com/services/hooks/slackbot?token=" + URL_TOKEN_STRING + "&channel=" + HASH + self.channel_name
@@ -80,7 +77,7 @@ class Bot:
 '''
 Selects an active user from a list of users
 '''
-def selectUser(bot, exercise):
+def selectUser(bot):
     active_users = fetchActiveUsers(bot)
 
     # Add all active users not already in the user queue
@@ -99,11 +96,8 @@ def selectUser(bot, exercise):
     for i in range(len(bot.user_queue)):
         user = bot.user_queue[i]
 
-        # User should be active and not have done exercise yet
-        if user in active_users and not user.hasDoneExercise(exercise):
-            bot.user_queue.remove(user)
-            return user
-        elif user in active_users:
+        # TODO: add responsibility balancing over the course of a week
+        if user in active_users:
             # Decrease sliding window by one. Basically, we don't want to jump
             # too far ahead in our queue
             sliding_window -= 1
@@ -148,91 +142,37 @@ def fetchActiveUsers(bot):
 
     return active_users
 
-'''
-Selects an exercise and start time, and sleeps until the time
-period has past.
-'''
-def selectExerciseAndStartTime(bot):
-    next_time_interval = selectNextTimeInterval(bot)
-    minute_interval = next_time_interval//60
-    exercise = selectExercise(bot)
-
-    # Announcement String of next lottery time
-    lottery_announcement = "Hey guys, next lottery for " + exercise["name"] + " is in " + str(minute_interval) + (" minutes" if minute_interval != 1 else " minute")
-
-    # Announce the exercise to the thread
-    if not bot.debug:
-        requests.post(bot.post_URL, data=lottery_announcement)
-    print(lottery_announcement)
-
-    # Sleep the script until time is up
-    if not bot.debug:
-        time.sleep(next_time_interval)
-    else:
-        # If debugging, once every 5 seconds
-        time.sleep(5)
-
-    return exercise
-
-
-'''
-Selects the next exercise
-'''
-def selectExercise(bot):
-    idx = random.randrange(0, len(bot.exercises))
-    return bot.exercises[idx]
-
-
-'''
-Selects the next time interval
-'''
-def selectNextTimeInterval(bot):
-    return random.randrange(bot.min_countdown * 60, bot.max_countdown * 60)
-
 
 '''
 Selects a person to do the already-selected exercise
 '''
-def assignExercise(bot, exercise):
-    # Select number of reps
-    exercise_reps = random.randrange(exercise["minReps"], exercise["maxReps"]+1)
+def assignDeploy(bot):
+    
+    winner_announcement = ", please deploy to Heroku!" 
 
-    winner_announcement = "I think you'd feel a lot better if you did " + str(exercise_reps) + " " + str(exercise["units"]) + " " + exercise["name"] + " ;)"
+    winners = [selectUser(bot) for i in range(bot.num_people_per_callout)]
+    winner_list = ('Captain ' if len(winners)==1 else 'Captains ')
+    for i in range(bot.num_people_per_callout):
+        winner_list += str(winners[i].getUserHandle().decode())  # remove b'
+        # winner_announcement = str(winners[i].getUserHandle()) + winner_announcement
+        if i == bot.num_people_per_callout - 2:
+            winner_list += ", and "
+        elif i == bot.num_people_per_callout - 1:
+            winner_list += ": "
+        else:
+            winner_list += ", "
 
-    # EVERYBODY
-    if random.random() < bot.group_callout_chance:
-        winner_announcement = "@here " + winner_announcement
-
-        for user_id in bot.user_cache:
-            user = bot.user_cache[user_id]
-            user.addExercise(exercise, exercise_reps)
-
-        logExercise(bot,"@here",exercise["name"],exercise_reps,exercise["units"])
-
-    else:
-        winners = [selectUser(bot, exercise) for i in range(bot.num_people_per_callout)]
-        winner_list = ('Captain ' if len(winners)==1 else 'Captains ')
-        for i in range(bot.num_people_per_callout):
-            winner_list += str(winners[i].getUserHandle().decode())  # remove b'
-            # winner_announcement = str(winners[i].getUserHandle()) + winner_announcement
-            if i == bot.num_people_per_callout - 2:
-                winner_list += ", and "
-            elif i == bot.num_people_per_callout - 1:
-                winner_list += ": "
-            else:
-                winner_list += ", "
-
-            winners[i].addExercise(exercise, exercise_reps)
-            logExercise(bot,winners[i].getUserHandle(),exercise["name"],exercise_reps,exercise["units"])
-         
-        winner_announcement = winner_list + winner_announcement
+        # logDeploy(bot,winners[i].getUserHandle())
+     
+    winner_announcement = winner_list + winner_announcement
     # Announce the user
     if not bot.debug:
         requests.post(bot.post_URL, data=winner_announcement)
+        bot.last_run = datetime.date.today()
     print(winner_announcement)
 
 
-def logExercise(bot,username,exercise,reps,units):
+def logDeploy(bot,username):
     filename = bot.csv_filename + "_DEBUG" if bot.debug else bot.csv_filename
     with open(filename, 'a') as f:
         writer = csv.writer(f)
@@ -302,11 +242,10 @@ def main():
                 # Re-fetch config file if settings have changed
                 bot.setConfiguration()
 
-                # Get an exercise to do
-                exercise = selectExerciseAndStartTime(bot)
-
-                # Assign the exercise to someone
-                assignExercise(bot, exercise)
+                # Assign the deploy to someone
+                if bot.last_run != datetime.date.today() and
+                    datetime.datetime.now().hour >= bot.deploy_time:
+                    assignDeploy(bot)
 
             else:
                 # Sleep the script and check again for office hours
@@ -317,7 +256,8 @@ def main():
                     time.sleep(5)
 
     except KeyboardInterrupt:
-        saveUsers(bot)
+        print("you kb-interrupted")
+        # saveUsers(bot)
 
 
 main()
