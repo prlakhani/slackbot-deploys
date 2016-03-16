@@ -9,7 +9,7 @@
     "noWeekends": true
    },
   "timezone": "US/Pacific",
-  "debug": true,
+  "debug": false,
 
   "callouts": {
     "deployTime": 14,

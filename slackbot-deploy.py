@@ -27,7 +27,7 @@ class Bot:
 
         self.csv_filename = "log" + time.strftime("%Y%m%d-%H%M") + ".csv"
         self.first_run = True
-        self.last_run = datetime.date.today()-timedelta(days=1)
+        self.last_run = datetime.date.today()-datetime.timedelta(days=1)
         # local cache of usernames
         # maps userIds to usernames
         self.user_cache = self.loadUserCache()
@@ -120,10 +120,10 @@ Fetches a list of all active users in the channel
 '''
 def fetchActiveUsers(bot):
     # Check for new members
-    params = {"token": USER_TOKEN_STRING, "channel": bot.channel_id}
-    response = requests.get("https://slack.com/api/channels.info", params=params)
-    user_ids = json.loads(response.text, encoding='utf-8')["channel"]["members"]
-    user_ids = [uid for uid in user_ids if uid not in bot.excluded_users]
+    # params = {"token": USER_TOKEN_STRING, "channel": bot.channel_id}
+    # response = requests.get("https://slack.com/api/channels.info", params=params)
+    # user_ids = json.loads(response.text, encoding='utf-8')["channel"]["members"]
+    user_ids = bot.allowed_to_deploy 
     active_users = []
 
     for user_id in user_ids:
@@ -148,7 +148,7 @@ Selects a person to do the already-selected exercise
 '''
 def assignDeploy(bot):
     
-    winner_announcement = ", please deploy to Heroku!" 
+    winner_announcement = "please deploy to Heroku!" 
 
     winners = [selectUser(bot) for i in range(bot.num_people_per_callout)]
     winner_list = ('Captain ' if len(winners)==1 else 'Captains ')
@@ -243,8 +243,7 @@ def main():
                 bot.setConfiguration()
 
                 # Assign the deploy to someone
-                if bot.last_run != datetime.date.today() and
-                    datetime.datetime.now().hour >= bot.deploy_time:
+                if (bot.last_run != datetime.date.today()) and (datetime.datetime.now().hour >= bot.deploy_time):
                     assignDeploy(bot)
 
             else:
