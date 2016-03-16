@@ -1,1 +1,1 @@
-slackbot: python3 slackbotExercise.py
+slackbot: python3 slackbot-deploy.py
