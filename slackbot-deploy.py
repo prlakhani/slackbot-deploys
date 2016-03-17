@@ -242,17 +242,20 @@ def main():
                 # Re-fetch config file if settings have changed
                 bot.setConfiguration()
 
+
                 # Assign the deploy to someone
-                if (bot.last_run != datetime.date.today()) and (datetime.datetime.now().hour >= bot.deploy_time):
+                if (bot.last_run != datetime.date.today()) and (datetime.datetime.now(bot.timezone).hour >= bot.deploy_time):
                     assignDeploy(bot)
+
+                time.sleep(60)
 
             else:
                 # Sleep the script and check again for office hours
                 if not bot.debug:
-                    time.sleep(5*60) # Sleep 5 minutes
+                    time.sleep(10*60) # Sleep 10 minutes
                 else:
                     # If debugging, check again in 5 seconds
-                    time.sleep(5)
+                    time.sleep(10)
 
     except KeyboardInterrupt:
         print("you kb-interrupted")
