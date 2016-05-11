@@ -156,6 +156,6 @@ def main():
     if not bot.debug:
         requests.post(bot.post_URL, data=winner_announcement)
     else:
-        print winner_announcement
+        print(winner_announcement)
 
 main()
