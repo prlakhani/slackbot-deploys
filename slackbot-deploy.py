@@ -26,8 +26,6 @@ class Bot:
         self.setConfiguration()
 
         self.csv_filename = "log" + time.strftime("%Y%m%d-%H%M") + ".csv"
-        self.first_run = True
-        self.last_run = datetime.date.today()-datetime.timedelta(days=1)
         # local cache of usernames
         # maps userIds to usernames
         self.user_cache = self.loadUserCache()
@@ -56,12 +54,12 @@ class Bot:
             settings = json.load(f)
 
             self.team_domain = settings["teamDomain"]
-            self.channel_name = settings["channelName"]
+            self.channel_name = settings["channel"]
             self.deploy_time = settings["callouts"]["deployTime"]
             self.num_people_per_callout = settings["callouts"]["numPeople"]
             self.sliding_window_size = settings["callouts"]["slidingWindowSize"]
             # self.channel_id = settings["channelId"]
-            self.channel_id = fci.fetch_id(settings["channelName"])
+            self.channel_id = fci.fetch_id(settings["channel"])
             self.timezone = pytz.timezone(settings["timezone"])
             self.office_hours_on = settings["officeHours"]["on"]
             self.office_hours_begin = settings["officeHours"]["begin"]
@@ -69,9 +67,8 @@ class Bot:
             self.no_weekends = settings["officeHours"]["noWeekends"]
             self.allowed_to_deploy = settings["allowedToDeploy"]
             self.debug = settings["debug"]
-
+        
         self.post_URL = "https://" + self.team_domain + ".slack.com/services/hooks/slackbot?token=" + URL_TOKEN_STRING + "&channel=" + HASH + self.channel_name
-
 
 ################################################################################
 '''
@@ -146,120 +143,19 @@ def fetchActiveUsers(bot):
 '''
 Selects a person to do the already-selected exercise
 '''
-def assignDeploy(bot):
-    
+
+def main():
+    bot = Bot()
+    bot.setConfiguration()
     winner_announcement = "please deploy to Heroku!" 
-
-    winners = [selectUser(bot) for i in range(bot.num_people_per_callout)]
-    winner_list = ('Captain ' if len(winners)==1 else 'Captains ')
-    for i in range(bot.num_people_per_callout):
-        winner_list += str(winners[i].getUserHandle().decode())  # remove b'
-        # winner_announcement = str(winners[i].getUserHandle()) + winner_announcement
-        if i == bot.num_people_per_callout - 2:
-            winner_list += ", and "
-        elif i == bot.num_people_per_callout - 1:
-            winner_list += ": "
-        else:
-            winner_list += ", "
-
-        # logDeploy(bot,winners[i].getUserHandle())
-     
+    winner = selectUser(bot)
+    winner_list = 'Captain '
+    winner_list += str(winner.getUserHandle().decode()) + ': ' # remove b'
     winner_announcement = winner_list + winner_announcement
     # Announce the user
     if not bot.debug:
         requests.post(bot.post_URL, data=winner_announcement)
-        bot.last_run = datetime.date.today()
-    print(winner_announcement)
-
-
-def logDeploy(bot,username):
-    filename = bot.csv_filename + "_DEBUG" if bot.debug else bot.csv_filename
-    with open(filename, 'a') as f:
-        writer = csv.writer(f)
-
-        writer.writerow([str(datetime.datetime.now()),username,exercise,reps,units,bot.debug])
-
-def saveUsers(bot):
-    # Write to the command console today's breakdown
-    s = "```\n"
-    #s += "Username\tAssigned\tComplete\tPercent
-    s += "Username".ljust(15)
-    for exercise in bot.exercises:
-        s += exercise["name"] + "  "
-    s += "\n---------------------------------------------------------------\n"
-
-    for user_id in bot.user_cache:
-        user = bot.user_cache[user_id]
-        s += user.username.ljust(15)
-        for exercise in bot.exercises:
-            if exercise["id"] in user.exercises:
-                s += str(user.exercises[exercise["id"]]).ljust(len(exercise["name"]) + 2)
-            else:
-                s += str(0).ljust(len(exercise["name"]) + 2)
-        s += "\n"
-
-        user.storeSession(str(datetime.datetime.now()))
-
-    s += "```"
-
-    if not bot.debug:
-        requests.post(bot.post_URL, data=s)
-    print(s)
-
-
-    # write to file
-    with open('user_cache.save','wb') as f:
-        pickle.dump(bot.user_cache,f)
-
-def isOfficeHours(bot):
-    if not bot.office_hours_on:
-        if bot.debug:
-            print("not office hours")
-        return True
-    now = datetime.datetime.now(bot.timezone)
-    # print(now)
-    now_hour = now.hour
-    if bot.no_weekends and now.weekday() > 4:
-        if bot.debug:
-            print("weekend -- out office hours")
-        return False
     else:
-        if now.hour >= bot.office_hours_begin and now_hour < bot.office_hours_end:
-            if bot.debug:
-                print("in office hours")
-            return True
-        else:
-            if bot.debug:
-                print("out office hours")
-            return False
-
-def main():
-    bot = Bot()
-
-    try:
-        while True:
-            if isOfficeHours(bot):
-                # Re-fetch config file if settings have changed
-                bot.setConfiguration()
-
-
-                # Assign the deploy to someone
-                if (bot.last_run != datetime.date.today()) and (datetime.datetime.now(bot.timezone).hour >= bot.deploy_time):
-                    assignDeploy(bot)
-
-                time.sleep(60)
-
-            else:
-                # Sleep the script and check again for office hours
-                if not bot.debug:
-                    time.sleep(10*60) # Sleep 10 minutes
-                else:
-                    # If debugging, check again in 5 seconds
-                    time.sleep(10)
-
-    except KeyboardInterrupt:
-        print("you kb-interrupted")
-        # saveUsers(bot)
-
+        print winner_announcement
 
 main()

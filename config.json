@@ -1,6 +1,6 @@
 {
   "teamDomain": "captain401",
-  "channelName": "deploys",
+  "channel": "deploys",
 
   "officeHours": {
     "on": true,
@@ -9,7 +9,7 @@
     "noWeekends": true
    },
   "timezone": "US/Pacific",
-  "debug": false,
+  "debug": true,
 
   "callouts": {
     "deployTime": 15,
