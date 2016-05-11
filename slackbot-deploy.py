@@ -127,15 +127,9 @@ def fetchActiveUsers(bot):
         # Add user to the cache if not already
         if user_id not in bot.user_cache:
             bot.user_cache[user_id] = User(user_id)
-            if not bot.first_run:
-                # Push our new users near the front of the queue!
-                bot.user_queue.insert(2,bot.user_cache[user_id])
 
         if bot.user_cache[user_id].isActive():
             active_users.append(bot.user_cache[user_id])
-
-    if bot.first_run:
-        bot.first_run = False
 
     return active_users
 
