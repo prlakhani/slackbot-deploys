@@ -150,7 +150,7 @@ def main():
     if not bot.debug:
         if not bot.no_weekends:
             requests.post(bot.post_URL, data=winner_announcement)
-        else if datetime.date.today.weekday() < 5:
+        elif datetime.date.today.weekday() < 5:
             requests.post(bot.post_URL, data=winner_announcement)
         else:
             print("It's a weekend, no deploys!")
