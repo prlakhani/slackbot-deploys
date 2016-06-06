@@ -67,7 +67,7 @@ class Bot:
             self.no_weekends = settings["officeHours"]["noWeekends"]
             self.allowed_to_deploy = settings["allowedToDeploy"]
             self.debug = settings["debug"]
-        
+
         self.post_URL = "https://" + self.team_domain + ".slack.com/services/hooks/slackbot?token=" + URL_TOKEN_STRING + "&channel=" + HASH + self.channel_name
 
 ################################################################################
@@ -120,7 +120,7 @@ def fetchActiveUsers(bot):
     # params = {"token": USER_TOKEN_STRING, "channel": bot.channel_id}
     # response = requests.get("https://slack.com/api/channels.info", params=params)
     # user_ids = json.loads(response.text, encoding='utf-8')["channel"]["members"]
-    user_ids = bot.allowed_to_deploy 
+    user_ids = bot.allowed_to_deploy
     active_users = []
 
     for user_id in user_ids:
@@ -141,14 +141,19 @@ Selects a person to do the already-selected exercise
 def main():
     bot = Bot()
     bot.setConfiguration()
-    winner_announcement = "please deploy to Heroku!" 
+    winner_announcement = "please deploy to Heroku!"
     winner = selectUser(bot)
     winner_list = 'Captain '
     winner_list += str(winner.getUserHandle().decode()) + ': ' # remove b'
     winner_announcement = winner_list + winner_announcement
-    # Announce the user
+    # Announce the user if it's a weekday
     if not bot.debug:
-        requests.post(bot.post_URL, data=winner_announcement)
+        if not bot.no_weekends:
+            requests.post(bot.post_URL, data=winner_announcement)
+        else if datetime.date.today.weekday() < 5:
+            requests.post(bot.post_URL, data=winner_announcement)
+        else:
+            print("It's a weekend, no deploys!")
     else:
         print(winner_announcement)
 
