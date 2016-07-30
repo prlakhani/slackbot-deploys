@@ -1,20 +1,18 @@
-# slackbot-workout
-A fun hack that gets Slackbot to force your teammates to work out!
-
-<img src = "https://ctrlla-blog.s3.amazonaws.com/2015/Jun/Screen_Shot_2015_06_10_at_5_57_55_PM-1433984292189.png" width = 500>
+# slackbot-deploys
+Gentle edits from [github.com/brandonshin/slackbot-workout](https://github.com/brandonshin/slackbot-workout)
 
 
 # Instructions
 
 1. Clone the repo and navigate into the directory in your terminal.
 
-    `$ git clone git@github.com:brandonshin/slackbot-workout.git`
+    `$ git clone git@github.com:prlakhani/slackbot-deploys.git`
 
 2. Go to your slack home page [https://{yourgroup}.slack.com/home](http://my.slack.com/home) & click on **Integrations** on the left sidebar.
 
     <img src = "https://ctrlla-blog.s3.amazonaws.com/2015/Jun/Screen_Shot_2015_06_05_at_7_21_33_PM-1433557303531.png" width = 300>
 
-3. Scroll All the Way Down until you see **Slack API** and **Slackbot**. You'll need to access these two integrations.
+3. Scroll all the way down until you see **Slack API** and **Slackbot**. You'll need to access these two integrations.
 
     <img src="https://ctrlla-blog.s3.amazonaws.com/2015/Jun/Screen_Shot_2015_06_05_at_7_19_44_PM-1433557206307.png" width = 500>
 
@@ -42,13 +40,17 @@ A fun hack that gets Slackbot to force your teammates to work out!
 
     `$ python fetchChannelId.py channelname`
 
-8. If you haven't set up pip for python, go in your terminal and run.
+8. To run locally: if you haven't set up pip for python, go to your terminal and run.
 `$ sudo easy_install pip`
 
 9. While in the project directory, run
 
     `$ sudo pip install -r requirements.txt`
 
-    `$ python slackbotExercise.py`
+    `$ python slackbot-deploy.py`
 
-Run the script to start the workouts and hit ctrl+c to stop the script. Hope you have fun with it!
+Currently, this works using Heroku's scheduler (remember to set up the necessary environment variables), but this can sometimes be unreliable.
+
+TODO: replace above with clock process, [as suggested by Heroku](https://devcenter.heroku.com/articles/clock-processes-python)
+
+TODO: move `allowedToDeploy` config variable into environment variable
